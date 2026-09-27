@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+  <defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9DB8FF"/><stop offset="1" stop-color="#FCE3F1"/></linearGradient></defs>
+  <rect width="800" height="500" fill="url(#s)"/>
+  <g fill="#fff" opacity=".8"><ellipse cx="120" cy="110" rx="80" ry="26"/><ellipse cx="160" cy="95" rx="50" ry="28"/><ellipse cx="660" cy="140" rx="90" ry="26"/><ellipse cx="700" cy="122" rx="50" ry="26"/></g>
+  <g transform="translate(400 120)">
+    <rect x="-120" y="90" width="240" height="160" fill="#E9ECFF"/>
+    <rect x="-160" y="40" width="60" height="210" fill="#D7DCFA"/><rect x="100" y="40" width="60" height="210" fill="#D7DCFA"/>
+    <rect x="-40" y="10" width="80" height="240" fill="#F3F4FF"/>
+    <path d="M-170 44 L-130 -20 L-90 44Z" fill="#4C7BF3"/><path d="M90 44 L130 -20 L170 44Z" fill="#4C7BF3"/><path d="M-50 14 L0 -60 L50 14Z" fill="#F2603A"/>
+    <path d="M0 -60 V-95" stroke="#6B4527" stroke-width="4"/><path d="M0 -95 L34 -85 L0 -75Z" fill="#FFC93C"/>
+    <path d="M-130 -20 V-45" stroke="#6B4527" stroke-width="3"/><path d="M-130 -45 L-106 -38 L-130 -31Z" fill="#F2603A"/>
+    <path d="M130 -20 V-45" stroke="#6B4527" stroke-width="3"/><path d="M130 -45 L154 -38 L130 -31Z" fill="#F2603A"/>
+    <path d="M-28 250 V200 Q0 170 28 200 V250Z" fill="#8A5A34"/>
+    <g fill="#9DB8FF"><rect x="-10" y="60" width="20" height="30" rx="10"/><rect x="-140" y="90" width="20" height="30" rx="10"/><rect x="120" y="90" width="20" height="30" rx="10"/><rect x="-80" y="130" width="18" height="26" rx="9"/><rect x="62" y="130" width="18" height="26" rx="9"/></g>
+    <g fill="#E9ECFF"><rect x="-120" y="78" width="20" height="14"/><rect x="-80" y="78" width="20" height="14"/><rect x="60" y="78" width="20" height="14"/><rect x="100" y="78" width="20" height="14"/></g>
+  </g>
+  <g fill="#fff"><ellipse cx="400" cy="400" rx="330" ry="60"/><ellipse cx="220" cy="380" rx="120" ry="50"/><ellipse cx="590" cy="380" rx="130" ry="50"/><ellipse cx="400" cy="360" rx="160" ry="40"/></g>
+  <g fill="#fff" opacity=".7"><ellipse cx="100" cy="460" rx="140" ry="40"/><ellipse cx="720" cy="470" rx="140" ry="40"/></g>
+</svg>

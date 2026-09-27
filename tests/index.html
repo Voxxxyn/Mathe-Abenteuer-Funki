@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mathe-Abenteuer – Selbsttest</title>
+  <style>
+    body { font-family: ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif; background: #FFF6E6; color: #2B2A4C; margin: 0; padding: 24px; }
+    h1 { margin: 0 0 6px; }
+    .sum { font-size: 22px; font-weight: 800; margin: 12px 0 18px; padding: 14px 18px; border-radius: 16px; }
+    .ok { background: #D4F5DE; } .bad { background: #FFE0DC; }
+    li { font-size: 17px; margin: 6px 0; list-style: none; }
+    li b { display: inline-block; width: 1.4em; }
+    small { color: #B23A33; display: block; margin-left: 1.6em; }
+    a { color: #5236D6; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Selbsttest der Rechen- und Spiellogik</h1>
+  <p>Diese Seite prüft automatisch tausende Aufgaben, Hinweise, Punkte, Level, Truhen und die Speicherung. Der Spielstand wird dabei <b>nicht</b> verändert.</p>
+  <div id="sum" class="sum">Tests laufen …</div>
+  <ul id="list"></ul>
+  <p><a href="../index.html">← Zurück zum Spiel</a></p>
+  <script src="../js/storage.js"></script>
+  <script src="../js/generator.js"></script>
+  <script src="../js/game.js"></script>
+  <script src="tests.js"></script>
+  <script>
+    (function () {
+      var r = window.MA_TEST_RESULTS || [], bad = r.filter(function (x) { return !x.ok; });
+      document.getElementById('list').innerHTML = r.map(function (x) {
+        return '<li><b>' + (x.ok ? '✅' : '❌') + '</b>' + x.name + (x.ok ? '' : '<small>' + x.msg + '</small>') + '</li>';
+      }).join('');
+      var s = document.getElementById('sum');
+      s.className = 'sum ' + (bad.length ? 'bad' : 'ok');
+      s.textContent = (r.length - bad.length) + ' von ' + r.length + ' Tests bestanden' + (bad.length ? ' – bitte Fehler prüfen.' : ' – alles in Ordnung!');
+    })();
+  </script>
+</body>
+</html>

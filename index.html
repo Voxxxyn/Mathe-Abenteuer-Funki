@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Mathe-Abenteuer</title>
+  <meta name="description" content="Mathe-Abenteuer – Plus und Minus bis 100 als kleines Abenteuerspiel. Funktioniert offline, ohne Anmeldung.">
+  <meta name="theme-color" content="#FFB23F">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Mathe-Abenteuer">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- Startbildschirm -->
+    <section id="screen-start" class="screen active" aria-label="Startbildschirm">
+      <div class="start-bg" aria-hidden="true"></div>
+      <div class="corner-right">
+        <button class="icon-btn hold-btn" data-hold="parents" aria-label="Elternbereich – 3 Sekunden gedrückt halten">
+          <span class="hold-ring" aria-hidden="true"></span><span data-icon="gear"></span>
+        </button>
+      </div>
+      <div class="start-inner">
+        <h1 class="logo"><span class="logo-top">Mathe</span><span class="logo-bottom">Abenteuer</span></h1>
+        <div class="start-hero">
+          <div class="mascot mascot--big" data-mascot></div>
+          <div class="bubble" id="start-bubble">Hallo! Ich bin Funki. Kommst du mit auf ein Rechen-Abenteuer?</div>
+        </div>
+        <div class="start-stats">
+          <span class="pill pill-coin"><span data-icon="coin"></span><b data-bind="points">0</b></span>
+          <span class="pill pill-star"><span data-icon="star"></span><b data-bind="stars">0</b></span>
+        </div>
+        <div class="start-actions">
+          <button class="btn btn-primary btn-xl" data-go="map"><span data-icon="play"></span>Los geht's!</button>
+          <button class="btn btn-secondary" data-go="collection"><span data-icon="bag"></span>Meine Sammlung</button>
+        </div>
+        <p class="update-note" id="update-note" hidden>Neue Version geladen – sie startet beim nächsten Öffnen.</p>
+      </div>
+    </section>
+
+    <!-- Abenteuerkarte -->
+    <section id="screen-map" class="screen" aria-label="Abenteuerkarte">
+      <header class="topbar">
+        <button class="icon-btn" data-go="start" aria-label="Zurück zum Start"><span data-icon="back"></span></button>
+        <h2 class="topbar-title">Abenteuerkarte</h2>
+        <div class="topbar-right">
+          <span class="pill pill-coin"><span data-icon="coin"></span><b data-bind="points">0</b></span>
+          <span class="pill pill-star"><span data-icon="star"></span><b data-bind="stars">0</b></span>
+          <button class="icon-btn" data-go="collection" aria-label="Sammlung"><span data-icon="bag"></span></button>
+          <button class="icon-btn hold-btn" data-hold="parents" aria-label="Elternbereich – 3 Sekunden gedrückt halten">
+            <span class="hold-ring" aria-hidden="true"></span><span data-icon="gear"></span>
+          </button>
+        </div>
+      </header>
+      <div class="scroll">
+        <div class="map-trail" id="map-grid"></div>
+      </div>
+    </section>
+
+    <!-- Levelauswahl einer Welt -->
+    <section id="screen-world" class="screen" aria-label="Levelauswahl">
+      <div class="world-bg" id="world-bg" aria-hidden="true"></div>
+      <header class="topbar">
+        <button class="icon-btn" data-go="map" aria-label="Zur Abenteuerkarte"><span data-icon="map"></span></button>
+        <h2 class="topbar-title" id="world-title">Welt</h2>
+        <div class="topbar-right">
+          <span class="pill pill-coin"><span data-icon="coin"></span><b data-bind="points">0</b></span>
+          <span class="pill pill-star"><span data-icon="star"></span><b id="world-stars">0</b></span>
+        </div>
+      </header>
+      <div class="scroll">
+        <div class="world-inner">
+          <div class="world-hero">
+            <div class="mascot mascot--mid" data-mascot></div>
+            <div class="bubble" id="world-bubble"></div>
+          </div>
+          <div class="level-path" id="level-path"></div>
+          <div class="reward-card" id="world-reward"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rechenansicht -->
+    <section id="screen-play" class="screen" aria-label="Rechnen">
+      <div class="world-bg world-bg--soft" id="play-bg" aria-hidden="true"></div>
+      <header class="topbar">
+        <button class="icon-btn" id="btn-pause" aria-label="Level verlassen"><span data-icon="back"></span></button>
+        <h2 class="topbar-title" id="play-title">Level</h2>
+        <div class="topbar-right">
+          <span class="pill pill-coin" id="play-points-pill"><span data-icon="coin"></span><b data-bind="points">0</b></span>
+          <span class="pill pill-flame" id="streak-pill" aria-label="Serie"><span data-icon="flame"></span><b id="streak-val">0</b></span>
+        </div>
+      </header>
+      <div class="progress-row">
+        <div class="progress" role="progressbar" aria-label="Fortschritt im Level" aria-valuemin="0" id="level-progress">
+          <div class="progress-fill" id="level-progress-fill"></div>
+        </div>
+        <span class="progress-label" id="level-progress-label">0 / 10</span>
+        <div class="mini-reward" id="mini-reward"></div>
+      </div>
+      <div class="play-main">
+        <div class="play-left">
+          <div class="play-hero">
+            <div class="mascot mascot--mid" data-mascot id="play-mascot"></div>
+            <div class="bubble bubble--play" id="play-bubble" aria-live="polite"></div>
+          </div>
+          <div class="task-card" id="task-card">
+            <div class="task" id="task" aria-live="polite">
+              <span id="task-text">3 + 4</span><span class="eq">=</span><span class="answer-box" id="answer-box" aria-label="Deine Antwort"><span id="answer-text"></span><span class="caret" aria-hidden="true"></span></span>
+            </div>
+            <div class="hint-card" id="hint-card" hidden></div>
+            <div class="float-layer" id="float-layer" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="play-right">
+          <div class="keypad" id="keypad" role="group" aria-label="Zahlentastatur"></div>
+          <div class="mc" id="mc" role="group" aria-label="Antwortmöglichkeiten" hidden></div>
+          <button class="btn btn-ghost btn-finish" id="btn-finish" hidden><span data-icon="flag"></span>Level beenden</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sammlung -->
+    <section id="screen-collection" class="screen" aria-label="Sammlung">
+      <header class="topbar">
+        <button class="icon-btn" data-go="back" aria-label="Zurück"><span data-icon="back"></span></button>
+        <h2 class="topbar-title">Meine Sammlung</h2>
+        <div class="topbar-right">
+          <span class="pill pill-star"><span data-icon="star"></span><b data-bind="stars">0</b></span>
+        </div>
+      </header>
+      <div class="scroll">
+        <div class="collection-inner">
+          <h3 class="section-title">Schätze</h3>
+          <div class="collect-grid" id="collect-items"></div>
+          <h3 class="section-title">Abzeichen</h3>
+          <div class="collect-grid collect-grid--badges" id="collect-badges"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Elternbereich -->
+    <section id="screen-parents" class="screen screen--parents" aria-label="Elternbereich">
+      <header class="topbar topbar--plain">
+        <button class="icon-btn" data-go="start" aria-label="Elternbereich schließen"><span data-icon="back"></span></button>
+        <h2 class="topbar-title">Elternbereich</h2>
+        <div class="tabs" role="tablist">
+          <button class="tab active" role="tab" aria-selected="true" data-tab="settings">Einstellungen</button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="stats">Statistik</button>
+        </div>
+      </header>
+      <div class="scroll">
+        <div class="parents-inner">
+          <div class="tab-panel" id="tab-settings" role="tabpanel"></div>
+          <div class="tab-panel" id="tab-stats" role="tabpanel" hidden></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Dialoge -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" id="modal-box"></div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+  <div class="sr-only" id="live" aria-live="assertive"></div>
+  <noscript><p style="padding:24px;font-size:20px">Bitte JavaScript aktivieren, um Mathe-Abenteuer zu spielen.</p></noscript>
+
+  <script src="js/storage.js"></script>
+  <script src="js/generator.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/graphics.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
