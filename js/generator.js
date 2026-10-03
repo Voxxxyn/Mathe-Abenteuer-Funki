@@ -51,6 +51,7 @@
   }
   function categoryLabel(key) {
     var p = String(key).split('|');
+    if (p[0] === 'mul' || p[0] === 'div') return (p[0] === 'mul' ? 'Mal' : 'Geteilt') + ': ' + p[1] + 'er-Reihe';
     var t = p[0] === 'add' ? 'Plus' : 'Minus';
     var c = p[1] === 'z' ? 'mit Zehnerübergang' : 'ohne Zehnerübergang';
     return t + ' ' + c + ' (bis ' + p[2] + ')';
@@ -162,7 +163,8 @@
     return makeTask(op, pair[0], pair[1], adaptive);
   }
 
-  function makeTask(op, a, b, adaptive) {
+  function makeTask(op, a, b, adaptive, row) {
+    if (op === 'mul' || op === 'div') return makeMulTask(op, a, b, adaptive, row);
     var r = result(op, a, b);
     return {
       op: op, a: a, b: b, answer: r,
@@ -178,6 +180,7 @@
   /* Multiple Choice: typische Fehler als Ablenker */
   function choices(task, count) {
     count = count || 4;
+    if (task.op === 'mul' || task.op === 'div') return mulChoices(task, count);
     var a = task.a, b = task.b, r = task.answer, op = task.op;
     var c = [];
     function add(v) { if (v >= 0 && v <= 100 && v !== r && c.indexOf(v) < 0) c.push(v); }
@@ -206,6 +209,7 @@
 
   /* Regelbasierte Hilfen. Liefert { hint1, hint2, steps[] } */
   function hints(task) {
+    if (task.op === 'mul' || task.op === 'div') return mulHints(task);
     var a = task.a, b = task.b, r = task.answer;
     var h = { hint1: '', hint2: '', steps: [] };
     if (task.op === 'add') {
@@ -286,6 +290,7 @@
   var SOFT = ['Fast! Versuch es noch einmal.', 'Das war knapp. Schau noch einmal genau hin.',
     'Hmm, noch nicht ganz. Du schaffst das!', 'Guter Versuch! Probier es nochmal.'];
   function wrongMessage(task, given) {
+    if (task.op === 'mul' || task.op === 'div') return mulWrongMessage(task, given);
     var r = task.answer;
     if (given === r + 10 || given === r - 10) return 'Fast! Schau noch einmal auf die Zehner.';
     if (Math.floor(given / 10) === Math.floor(r / 10) && given !== r) return 'Die Zehner stimmen schon! Schau noch einmal auf die Einer.';
@@ -317,11 +322,150 @@
     return all.slice(0, 3).map(function (x) { return x.k; });
   }
 
+
+  /* =====================================================================
+     Version 2: kleines Einmaleins (Mal und Geteilt, Reihen 1–10)
+     ===================================================================== */
+  var ALL_ROWS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+  function makeMulTask(op, a, b, adaptive, row) {
+    var ans, text, speech, key;
+    if (op === 'mul') {
+      ans = a * b; text = a + ' × ' + b; speech = a + ' mal ' + b;
+      key = 'mul:' + Math.min(a, b) + 'x' + Math.max(a, b);
+    } else {
+      ans = b ? a / b : 0; text = a + ' ÷ ' + b; speech = a + ' geteilt durch ' + b;
+      key = 'div:' + a + '/' + b;
+    }
+    var r = row || b;
+    return { op: op, a: a, b: b, answer: ans, text: text, speech: speech, carry: false,
+      row: r, cat: op + '|' + r, key: key, adaptive: !!adaptive };
+  }
+
+  /* Welche Reihen sind erlaubt? */
+  function allowedRows(s) {
+    if (!s || s.rowMode !== 'select') return ALL_ROWS.slice();
+    var r = (s.rows || []).filter(function (x) { return ALL_ROWS.indexOf(x) >= 0; });
+    return r.length ? r : ALL_ROWS.slice();
+  }
+  var MIXED_WEIGHT = { 1: 0.4, 2: 0.7, 5: 0.8, 10: 0.5 };
+
+  /* Einzelaufgabe Mal/Geteilt. ctx = { settings, recentKeys, lastOps, weakCats } */
+  function generateMulDiv(ctx) {
+    var s = ctx.settings || {};
+    var ops = [];
+    if (s.mul !== false) ops.push('mul');
+    if (s.div !== false) ops.push('div');
+    if (!ops.length) ops = ['mul'];
+    var rows = allowedRows(s), mixed = s.rowMode === 'mixed';
+    var op = pick(ops), last = ctx.lastOps || [];
+    if (ops.length === 2 && last.length >= 3 && last[last.length - 1] === last[last.length - 2] && last[last.length - 2] === last[last.length - 3]) {
+      op = last[last.length - 1] === 'mul' ? 'div' : 'mul';
+    }
+    var row = null, adaptive = false;
+    var weak = (ctx.weakCats || []).filter(function (k) {
+      var p = String(k).split('|');
+      return ops.indexOf(p[0]) >= 0 && rows.indexOf(Number(p[1])) >= 0;
+    });
+    if (weak.length && rnd() < 0.25) {          // schwierige Reihen moderat öfter
+      var wk = pick(weak).split('|'); op = wk[0]; row = Number(wk[1]); adaptive = true;
+    }
+    if (!row) {
+      var wts = {};
+      rows.forEach(function (r) { wts[r] = mixed ? (MIXED_WEIGHT[r] || 1.3) : 1; });
+      row = Number(weighted(wts));
+    }
+    var recent = ctx.recentKeys || [], t = null;
+    for (var i = 0; i < 40; i++) {
+      var kw = { 1: 0.4, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 0.6 };
+      var k = Number(weighted(kw));
+      if (op === 'mul') t = rnd() < 0.5 ? makeMulTask('mul', k, row, adaptive, row) : makeMulTask('mul', row, k, adaptive, row);
+      else t = makeMulTask('div', k * row, row, adaptive, row);
+      if (recent.indexOf(t.key) < 0) break;
+    }
+    return t;
+  }
+
+  /* Reihentraining: die zehn Aufgaben einer Reihe in fester Reihenfolge */
+  function rowSequence(row, op) {
+    var out = [];
+    for (var k = 1; k <= 10; k++) out.push(op === 'div' ? makeMulTask('div', k * row, row, false, row) : makeMulTask('mul', k, row, false, row));
+    return out;
+  }
+
+  function mulChoices(task, count) {
+    var r = task.answer, c = [];
+    function add(v) { if (v >= 0 && v <= 100 && v !== r && c.indexOf(v) < 0) c.push(v); }
+    if (task.op === 'mul') {
+      var row = task.row, other = task.a === row ? task.b : task.a;
+      add(r + row); add(r - row);                         // eine Reihe daneben
+      if (other !== row) { add(r + other); add(r - other); }
+      add(task.a + task.b);                               // Plus statt Mal
+      if (r >= 10 && r % 10 !== Math.floor(r / 10)) add((r % 10) * 10 + Math.floor(r / 10));
+      add(r + 10); add(r - 10); add(r + 1); add(r - 1);
+    } else {
+      add(r + 1); add(r - 1); add(r + 2); add(r - 2);
+      if (task.b !== r) add(task.b);
+      add(task.a - task.b);
+    }
+    c = c.filter(function (v) { return task.op === 'mul' ? v > 0 : v >= 1; });
+    for (var k = 3; c.length < count - 1 && k < 200; k++) { add(r + k); if (r - k >= 1) add(r - k); }
+    var picks = shuffle(c.slice(0, 4)).slice(0, count - 1);
+    picks.push(r);
+    return shuffle(picks);
+  }
+
+  function multiples(n, upto) { var o = []; for (var i = 1; i <= upto; i++) o.push(i * n); return o.join(', '); }
+
+  function mulHints(task) {
+    var h = { hint1: '', hint2: '', steps: [] };
+    if (task.op === 'mul') {
+      var a = task.a, b = task.b, p = a * b, m, n;
+      // m = Malzahl (wie oft), n = Zahl, die vervielfacht wird. Leichte Malzahl bevorzugen.
+      var easy = [1, 10, 2, 5];
+      if (easy.indexOf(a) >= 0 && (easy.indexOf(b) < 0 || easy.indexOf(a) < easy.indexOf(b))) { m = a; n = b; }
+      else if (easy.indexOf(b) >= 0) { m = b; n = a; }
+      else { m = task.row === b ? a : b; n = task.row === b ? b : a; }
+      if (m === 1) { h.hint1 = 'Mal 1: Die Zahl bleibt gleich.'; h.hint2 = '1 × ' + n + ' = ' + n + '.'; h.steps = ['1 × ' + n + ' = ' + n]; }
+      else if (m === 10) { h.hint1 = 'Mal 10: Hänge an die ' + n + ' eine Null an.'; h.hint2 = n + ' mit einer Null dran ist ' + p + '.'; h.steps = [n + ' → ' + p]; }
+      else if (m === 2) { h.hint1 = 'Mal 2 heißt verdoppeln: ' + n + ' + ' + n + '.'; h.hint2 = n + ' + ' + n + ' = ' + p + '.'; h.steps = [n + ' + ' + n + ' = ' + p]; }
+      else if (m === 5) { h.hint1 = '5 × ' + n + ' ist die Hälfte von 10 × ' + n + '.'; h.hint2 = '10 × ' + n + ' = ' + (10 * n) + '. Die Hälfte davon ist gesucht.'; h.steps = ['10 × ' + n + ' = ' + (10 * n), 'Hälfte von ' + (10 * n) + ' = ' + p]; }
+      else if (m === 3) { h.hint1 = '3 × ' + n + ' ist 2 × ' + n + ' und noch einmal ' + n + '.'; h.hint2 = '2 × ' + n + ' = ' + (2 * n) + '. Jetzt noch ' + n + ' dazu.'; h.steps = ['2 × ' + n + ' = ' + (2 * n), (2 * n) + ' + ' + n + ' = ' + p]; }
+      else if (m === 4) { h.hint1 = '4 × ' + n + ' ist das Doppelte von 2 × ' + n + '.'; h.hint2 = '2 × ' + n + ' = ' + (2 * n) + '. Jetzt verdoppeln.'; h.steps = ['2 × ' + n + ' = ' + (2 * n), (2 * n) + ' + ' + (2 * n) + ' = ' + p]; }
+      else if (m === 9) { h.hint1 = 'Nimm 10 × ' + n + ' und dann einmal ' + n + ' weg.'; h.hint2 = '10 × ' + n + ' = ' + (10 * n) + '. Jetzt noch ' + n + ' abziehen.'; h.steps = ['10 × ' + n + ' = ' + (10 * n), (10 * n) + ' − ' + n + ' = ' + p]; }
+      else { var rest = m - 5; h.hint1 = 'Nimm 5 × ' + n + '. Dann fehlen noch ' + rest + ' × ' + n + '.'; h.hint2 = '5 × ' + n + ' = ' + (5 * n) + '. Und ' + rest + ' × ' + n + ' = ' + (rest * n) + '.'; h.steps = ['5 × ' + n + ' = ' + (5 * n), rest + ' × ' + n + ' = ' + (rest * n), (5 * n) + ' + ' + (rest * n) + ' = ' + p]; }
+      h.steps.push('Also: ' + task.text + ' = ' + p);
+    } else {
+      var d = task.a, r = task.b, q = task.answer;
+      if (r === 1) { h.hint1 = 'Geteilt durch 1: Die Zahl bleibt gleich.'; h.hint2 = d + ' ÷ 1 = ' + d + '.'; }
+      else if (r === 10) { h.hint1 = 'Geteilt durch 10: Nimm bei ' + d + ' die Null weg.'; h.hint2 = d + ' ohne Null ist ' + q + '.'; }
+      else {
+        h.hint1 = 'Denk an die Umkehraufgabe: Welche Zahl mal ' + r + ' ergibt ' + d + '?';
+        h.hint2 = 'Zähle in ' + r + 'er-Schritten bis ' + d + ': ' + multiples(r, q) + '. Wie viele Schritte waren das?';
+      }
+      h.steps = ['? × ' + r + ' = ' + d, q + ' × ' + r + ' = ' + d, 'Also: ' + task.text + ' = ' + q];
+    }
+    return h;
+  }
+
+  function mulWrongMessage(task, given) {
+    var r = task.answer;
+    if (task.op === 'mul') {
+      if (given === task.a + task.b) return 'Achtung: Hier heißt es Mal, nicht Plus!';
+      if (Math.abs(given - r) === task.a || Math.abs(given - r) === task.b) return 'Fast! Du bist genau einen Schritt in der Reihe daneben.';
+    } else {
+      if (Math.abs(given - r) === 1) return 'Ganz knapp! Prüfe mit der Umkehraufgabe: ' + given + ' × ' + task.b + ' = ' + (given * task.b) + '.';
+      if (given === task.a - task.b) return 'Achtung: Hier heißt es Geteilt, nicht Minus!';
+    }
+    return pick(SOFT);
+  }
+
   MA.Gen = {
     STAGES: STAGES, setRandom: setRandom, randInt: randInt, shuffle: shuffle,
     generate: generate, makeTask: makeTask, choices: choices, hints: hints,
     wrongMessage: wrongMessage, praise: praise, hasCarry: hasCarry,
     category: category, categoryLabel: categoryLabel, taskKey: taskKey,
-    weakCategories: weakCategories
+    weakCategories: weakCategories,
+    ALL_ROWS: ALL_ROWS, allowedRows: allowedRows, generateMulDiv: generateMulDiv, rowSequence: rowSequence
   };
 })(typeof window !== 'undefined' ? window : globalThis);

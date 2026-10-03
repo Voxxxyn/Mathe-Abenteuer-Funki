@@ -7,19 +7,19 @@
   var CHEST_AFTER = { 1: 3, 2: 5 }; // Truhe 1 nach Level 3, Welt-Truhe nach Level 5
 
   var WORLDS = [
-    { id: 'w1', name: 'Sonnendorf', stage: 1, color: '#F5A524', dark: '#C27800', light: '#FFF1CC',
+    { id: 'w1', name: 'Sonnendorf', stage: 1, color: '#F5A524', dark: '#C27800', light: '#FFF1CC', night: '#4A3A12',
       intro: 'Willkommen im Sonnendorf! Hier beginnt unser Abenteuer.',
       items: ['klee', 'sonnenblume'], badge: 'Dorf-Held' },
-    { id: 'w2', name: 'Zauberwald', stage: 2, color: '#2FA36B', dark: '#1B7048', light: '#DDF6E8',
+    { id: 'w2', name: 'Zauberwald', stage: 2, color: '#2FA36B', dark: '#1B7048', light: '#DDF6E8', night: '#163D2A',
       intro: 'Psst … im Zauberwald leuchten die Pilze. Rechnen wir uns hindurch!',
       items: ['pilz', 'feder'], badge: 'Wald-Wächter' },
-    { id: 'w3', name: 'Wolkenburg', stage: 3, color: '#4C7BF3', dark: '#2A52C0', light: '#E0E9FF',
+    { id: 'w3', name: 'Wolkenburg', stage: 3, color: '#4C7BF3', dark: '#2A52C0', light: '#E0E9FF', night: '#1E2E5C',
       intro: 'Die Wolkenburg! Die Ritter brauchen unsere Rechenkünste.',
       items: ['schild', 'krone'], badge: 'Burg-Ritter' },
-    { id: 'w4', name: 'Feuerberg', stage: 4, color: '#F2603A', dark: '#B83A1A', light: '#FFE3D8',
+    { id: 'w4', name: 'Feuerberg', stage: 4, color: '#F2603A', dark: '#B83A1A', light: '#FFE3D8', night: '#4A2116',
       intro: 'Heiß, heiß, heiß! Im Feuerberg glitzern die Kristalle.',
       items: ['kristall', 'drachenei'], badge: 'Vulkan-Forscher' },
-    { id: 'w5', name: 'Sternenreise', stage: 5, color: '#7A5CFA', dark: '#4F33C9', light: '#ECE6FF',
+    { id: 'w5', name: 'Sternenreise', stage: 5, color: '#7A5CFA', dark: '#4F33C9', light: '#ECE6FF', night: '#2E2366',
       intro: 'Countdown läuft … 3, 2, 1 – ab ins Weltall!',
       items: ['rakete', 'komet'], badge: 'Sternen-Kapitän' }
   ];
@@ -118,8 +118,14 @@
     st.timeSum += t;
     var d = dayOf(st, dayKey);
     d.tasks++; if (first) d.correct++;
-    var c = st.cats[task.cat] || (st.cats[task.cat] = { n: 0, wrong: 0, time: 0 });
+    var isMul = task.op === 'mul' || task.op === 'div';
+    var bucket = isMul ? (st.mulCats || (st.mulCats = {})) : st.cats;
+    var c = bucket[task.cat] || (bucket[task.cat] = { n: 0, wrong: 0, time: 0 });
     c.n++; if (!first) c.wrong++; c.time += t;
+    if (st.ops && st.ops[task.op]) {
+      var o = st.ops[task.op];
+      o.n++; if (first) o.first++; else o.wrong++; o.time += t;
+    }
     return { points: pts, bonus: bonus, bonusType: bonusType, streak: p.streak };
   }
 
@@ -163,12 +169,75 @@
     return res;
   }
 
+
+  /* =====================================================================
+     Version 2: Einmaleins-Zauberturm, Reihentraining und Tempo
+     Ergänzt die Welten – bestehende Level, Truhen und Welten bleiben unberührt.
+     ===================================================================== */
+  var TOWER = { name: 'Einmaleins-Zauberturm', color: '#B55CE6', dark: '#7E2FB0', light: '#F5E6FF', night: '#3A1F4F' };
+
+  function rowStars(p, row) {
+    var r = p.mul && p.mul.rowStars ? p.mul.rowStars[String(row)] : null;
+    return r ? { mul: r.mul || 0, div: r.div || 0 } : { mul: 0, div: 0 };
+  }
+  function mulStarsTotal(p) {
+    var s = 0; for (var r = 1; r <= 10; r++) { var x = rowStars(p, r); s += x.mul + x.div; } return s;
+  }
+  /* Aufgaben-Runde Mal/Geteilt abgeschlossen (keine Weltprogression, nur Sterne) */
+  function completeMulRound(state, firstCorrect, total) {
+    var m = state.progress.mul;
+    m.rounds++;
+    return { stars: starsFor(firstCorrect, total) };
+  }
+  /* Reihentraining abgeschlossen: Sterne pro Reihe und Rechenart, Medaille wenn beide 3 Sterne */
+  function completeRow(state, row, op, firstCorrect, total) {
+    if (row < 1 || row > 10 || (op !== 'mul' && op !== 'div')) return null;
+    var m = state.progress.mul, key = String(row);
+    var prev = rowStars(state.progress, row);
+    var stars = starsFor(firstCorrect, total);
+    var now = { mul: prev.mul, div: prev.div };
+    now[op] = Math.max(prev[op], stars);
+    m.rowStars[key] = now;
+    var medal = false;
+    if (now.mul === 3 && now.div === 3 && m.medals.indexOf(key) < 0) { m.medals.push(key); medal = true; }
+    return { stars: stars, best: now[op], improved: stars > prev[op], medal: medal };
+  }
+
+  /* Tempo: vergleichbare Bestwerte. Countdown = meiste gelöste Aufgaben, Stoppuhr = kürzeste Zeit */
+  function tempoKey(o) {
+    var parts = [o.kind === 'countdown' ? 'cd' : 'sw', o.area];
+    if (o.kind === 'countdown') parts.push(String(o.sec));
+    else parts.push(String(o.count));
+    if (o.sig) parts.push(o.sig);
+    return parts.join('|').toLowerCase().replace(/[^a-z0-9|:,.-]/g, '').slice(0, 84);
+  }
+  function settingsSig(s, area) {
+    if (area === 'addsub') return (s.add ? 'a' : '') + (s.sub ? 's' : '') + ':' + (s.carry ? 'z' : 'o') + ':' + s.range + ':' + s.difficulty;
+    if (area === 'muldiv') return (s.mul ? 'm' : '') + (s.div ? 'd' : '') + ':' + s.rowMode + ':' + (s.rowMode === 'select' ? s.rows.join(',') : 'alle');
+    return '';
+  }
+  function recordTempo(state, r) {
+    var t = state.tempo, key = tempoKey(r), prev = t.best[key] ? t.best[key].v : null, value, better;
+    if (r.kind === 'countdown') { value = r.correct; better = prev === null || value > prev; }
+    else { value = r.ms; better = prev === null || value < prev; }
+    if (r.kind === 'countdown' && r.tasks === 0) better = false;
+    var at = new Date().toISOString();
+    if (better) t.best[key] = { v: value, at: at, label: r.label || '' };
+    t.rounds++;
+    t.history.push({ at: at, kind: r.kind, area: r.area, label: r.label || '', tasks: r.tasks, correct: r.correct,
+      streak: r.streak || 0, ms: Math.round(r.ms || 0), best: !!better && prev !== null });
+    if (t.history.length > 30) t.history = t.history.slice(-30);
+    return { key: key, best: better, firstRecord: better && prev === null, prev: prev, value: value };
+  }
+
   MA.Game = {
     WORLDS: WORLDS, ITEMS: ITEMS, POINTS: POINTS, LEVELS_PER_WORLD: LEVELS_PER_WORLD, CHEST_AFTER: CHEST_AFTER,
     lid: lid, cid: cid, levelDone: levelDone, levelStars: levelStars, isWorldUnlocked: isWorldUnlocked,
     isLevelUnlocked: isLevelUnlocked, chestState: chestState, worldStars: worldStars, totalStars: totalStars,
     levelsCompleted: levelsCompleted, worldDone: worldDone, currentLevel: currentLevel, nextReward: nextReward,
     stageFor: stageFor, registerWrong: registerWrong, registerCorrect: registerCorrect, starsFor: starsFor,
-    completeLevel: completeLevel, openChest: openChest
+    completeLevel: completeLevel, openChest: openChest,
+    TOWER: TOWER, rowStars: rowStars, mulStarsTotal: mulStarsTotal, completeMulRound: completeMulRound, completeRow: completeRow,
+    tempoKey: tempoKey, settingsSig: settingsSig, recordTempo: recordTempo
   };
 })(typeof window !== 'undefined' ? window : globalThis);
