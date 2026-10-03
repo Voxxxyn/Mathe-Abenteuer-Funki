@@ -55,7 +55,17 @@
     check: '<path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>',
     flag: '<path d="M6 21V4" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M6 4h11l-2.5 4L17 12H6z" fill="currentColor"/>',
     bulb: '<path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z" fill="#FFD54A" stroke="#E0A100" stroke-width="1.4"/><rect x="8.5" y="18" width="7" height="3" rx="1.2" fill="#8B85A8"/>',
-    play: '<path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'
+    play: '<path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+    stopwatch: '<circle cx="12" cy="13.5" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M12 13.5V9M10 2.5h4M12 2.5v3M18.5 6.5l1.5-1.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    hourglass: '<path d="M6 3h12M6 21h12M7.5 3c0 5 9 5 9 9s-9 4-9 9M16.5 3c0 5-9 5-9 9s9 4 9 9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M9.5 19h5l-2.5-2.5z" fill="currentColor"/>',
+    sun: '<circle cx="12" cy="12" r="4.5" fill="#FFC93C" stroke="#E0A100" stroke-width="1.4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8" stroke="#E0A100" stroke-width="2" stroke-linecap="round"/>',
+    moon: '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="#B9A8FF" stroke="#7A5CFA" stroke-width="1.6" stroke-linejoin="round"/><circle cx="18" cy="5" r="1.2" fill="#FFE27A"/>',
+    auto: '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/>',
+    download: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19.5h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    upload: '<path d="M12 15V4M7.5 8.5L12 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19.5h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+    plusminus: '<path d="M7 3.5v8M3 7.5h8M13 17.5h8" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/>',
+    timesdiv: '<path d="M4 4l6 6M10 4l-6 6M14 17h7" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><circle cx="17.5" cy="13.5" r="1.4" fill="currentColor"/><circle cx="17.5" cy="20.5" r="1.4" fill="currentColor"/>',
+    rows: '<rect x="3" y="3.5" width="18" height="4" rx="2" fill="currentColor" opacity=".35"/><rect x="3" y="10" width="18" height="4" rx="2" fill="currentColor" opacity=".6"/><rect x="3" y="16.5" width="18" height="4" rx="2" fill="currentColor"/>'
   };
   function icon(name, cls, label) { return svg('0 0 24 24', ICON[name] || '', 'icon ' + (cls || ''), label); }
 
@@ -109,5 +119,34 @@
       '<circle cx="50" cy="48" r="33" fill="' + w.color + '"/>' + BADGE_SYM[w.id], 'badge-svg ' + (cls || ''), label);
   }
 
-  MA.Gfx = { mascot: mascot, icon: icon, chest: chest, item: item, badge: badge, svg: svg };
+
+  /* Version 2: Einmaleins-Zauberturm (Bereich Mal & Geteilt) */
+  function tower(cls) {
+    return svg('0 0 200 200',
+      '<ellipse cx="100" cy="186" rx="70" ry="10" fill="#000" opacity=".08"/>' +
+      '<path d="M62 180 L70 78 H130 L138 180Z" fill="#E9DDF7" stroke="#7E2FB0" stroke-width="4" stroke-linejoin="round"/>' +
+      '<path d="M70 78 H130 L126 92 H74Z" fill="#D7C4F0"/>' +
+      '<path d="M58 82 L100 20 L142 82Z" fill="#B55CE6" stroke="#7E2FB0" stroke-width="4" stroke-linejoin="round"/>' +
+      '<path d="M100 20 V6" stroke="#7E2FB0" stroke-width="4" stroke-linecap="round"/><path d="M100 6 l9 4 -9 4Z" fill="#FFC93C"/>' +
+      '<g fill="#FFE27A"><circle cx="86" cy="58" r="3"/><circle cx="112" cy="50" r="3.5"/><circle cx="100" cy="68" r="2.5"/></g>' +
+      '<rect x="88" y="104" width="24" height="30" rx="12" fill="#4C7BF3" stroke="#7E2FB0" stroke-width="3"/>' +
+      '<text x="100" y="125" text-anchor="middle" font-size="20" font-weight="900" fill="#fff" font-family="ui-rounded, system-ui, sans-serif">×</text>' +
+      '<path d="M86 180 V160 Q100 146 114 160 V180Z" fill="#8A5A34"/>' +
+      '<g fill="#FFC93C" stroke="#E0A100" stroke-width="1.5"><path d="M40 60 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3Z"/><path d="M160 104 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5Z"/></g>' +
+      '<text x="38" y="130" font-size="26" font-weight="900" fill="#7A5CFA" font-family="ui-rounded, system-ui, sans-serif">÷</text>' +
+      '<text x="150" y="70" font-size="24" font-weight="900" fill="#22B3A0" font-family="ui-rounded, system-ui, sans-serif">×</text>',
+      'tower-svg ' + (cls || ''), 'Einmaleins-Zauberturm');
+  }
+  /* Reihen-Medaille (nummeriert 1–10) */
+  function rowMedal(row, earned, cls) {
+    var c = earned ? '#B55CE6' : '#CFC8DE', d = earned ? '#7E2FB0' : '#B3AAC6';
+    return svg('0 0 100 110',
+      '<path d="M32 80 L24 108 L40 100 L48 110 L50 84Z M68 80 L76 108 L60 100 L52 110 L50 84Z" fill="' + d + '"/>' +
+      '<circle cx="50" cy="48" r="42" fill="' + (earned ? '#FFC93C' : '#E6E1EE') + '" stroke="' + (earned ? '#E0A100' : '#CFC8DE') + '" stroke-width="4"/>' +
+      '<circle cx="50" cy="48" r="33" fill="' + c + '"/>' +
+      '<text x="50" y="62" text-anchor="middle" font-size="' + (row === 10 ? 34 : 40) + '" font-weight="900" fill="#fff" font-family="ui-rounded, system-ui, sans-serif">' + row + '</text>',
+      'badge-svg medal-svg ' + (cls || ''), earned ? 'Medaille ' + row + 'er-Reihe' : 'Medaille ' + row + 'er-Reihe, noch nicht verdient');
+  }
+
+  MA.Gfx = { mascot: mascot, icon: icon, chest: chest, item: item, badge: badge, svg: svg, tower: tower, rowMedal: rowMedal };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -1,6 +1,16 @@
 /* Mathe-Abenteuer – Service Worker für Offline-Nutzung.
-   WICHTIG bei Änderungen: VERSION erhöhen, dann laden alle Geräte die neue Fassung. */
-var VERSION = 'v1.0.0';
+   WICHTIG bei Änderungen: VERSION erhöhen (passend zu js/version.js), dann laden alle Geräte die neue Fassung.
+
+   Update-Ablauf ab Version 2:
+   1. Die neue Version wird komplett im Hintergrund in einen eigenen Cache geladen (alles oder nichts).
+      Schlägt eine Datei fehl, bleibt die bisherige Version unverändert aktiv.
+   2. Die neue Version wartet, bis die App sie übernimmt (Startbildschirm oder Knopf „Jetzt aktualisieren“),
+      oder bis die App vollständig geschlossen und neu geöffnet wird.
+   3. Erst nach der Aktivierung wird der alte Cache gelöscht. Der Spielstand (localStorage) ist davon nie betroffen.
+   Sonderfall Version 1 → 2: Version 1 kennt die Übernahme-Nachricht nicht. Ist noch der V1-Cache vorhanden,
+   aktiviert sich Version 2 deshalb wie bisher sofort; die alte Seite lädt sich danach einmal neu. */
+var VERSION = 'v2.0.0';
+var LEGACY_V1_CACHE = 'mathe-abenteuer-v1.0.0';
 var CACHE = 'mathe-abenteuer-' + VERSION;
 var FILES = [
   './',
@@ -8,6 +18,7 @@ var FILES = [
   './style.css',
   './app.js',
   './manifest.json',
+  './js/version.js',
   './js/storage.js',
   './js/generator.js',
   './js/game.js',
@@ -18,6 +29,7 @@ var FILES = [
   './assets/images/world-3.svg',
   './assets/images/world-4.svg',
   './assets/images/world-5.svg',
+  './assets/images/zauberturm.svg',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
@@ -34,8 +46,16 @@ self.addEventListener('install', function (event) {
           return cache.put(url, res);
         });
       }));
-    }).then(function () { return self.skipWaiting(); })
+    }).then(function () {
+      // Erstinstallation oder Übergang von Version 1: sofort aktivieren
+      if (!self.registration.active) return self.skipWaiting();
+      return caches.has(LEGACY_V1_CACHE).then(function (isV1) { if (isV1) return self.skipWaiting(); });
+    })
   );
+});
+
+self.addEventListener('message', function (event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', function (event) {

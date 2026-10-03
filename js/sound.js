@@ -59,7 +59,11 @@
     chest: function () { seq([N.C5, N.D5, N.E5, N.G5, N.A5, N.C6, N.E6, N.G6], 0.05, 0.25, 'sine', 0.35); },
     level: function () { seq([N.C5, N.E5, N.G5], 0.12, 0.2, 'triangle', 0.45); tone(N.C6, 0.38, 0.5, 'triangle', 0.5); },
     world: function () { seq([N.G4, N.C5, N.E5, N.G5], 0.13, 0.22, 'triangle', 0.45); tone(N.C6, 0.55, 0.5, 'sine', 0.4); tone(N.E6, 0.75, 0.5, 'sine', 0.35); tone(N.G6, 0.95, 0.7, 'sine', 0.3); },
-    star: function () { tone(N.E6, 0, 0.25, 'sine', 0.3); }
+    star: function () { tone(N.E6, 0, 0.25, 'sine', 0.3); },
+    // Version 2
+    tick: function () { tone(N.A5, 0, 0.07, 'sine', 0.16); },
+    tempoEnd: function () { seq([N.G5, N.E5, N.G5, N.C6], 0.11, 0.2, 'triangle', 0.4); tone(N.E6, 0.48, 0.5, 'sine', 0.3); },
+    rowDone: function () { seq([N.C5, N.E5, N.G5, N.C6, N.G5, N.C6], 0.07, 0.2, 'triangle', 0.4); }
   };
 
   function play(name) {
@@ -72,7 +76,7 @@
         var now = Date.now();
         if (now - lastClick < 60) return;
         lastClick = now;
-      } else if (name !== 'star') {
+      } else if (name !== 'star' && name !== 'tick') {
         stopAll(); // Effekte überlagern sich nicht
       }
       SOUNDS[name]();
