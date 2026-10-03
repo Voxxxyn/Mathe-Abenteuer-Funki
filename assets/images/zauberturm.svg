@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6B4FC9"/><stop offset=".6" stop-color="#C79BEA"/><stop offset="1" stop-color="#FCE3F1"/></linearGradient>
+    <radialGradient id="m" cx=".35" cy=".35"><stop offset="0" stop-color="#FFFBEA"/><stop offset="1" stop-color="#FFE27A"/></radialGradient>
+  </defs>
+  <rect width="800" height="500" fill="url(#s)"/>
+  <circle cx="660" cy="90" r="46" fill="url(#m)"/>
+  <g fill="#fff"><circle cx="70" cy="60" r="2.5"/><circle cx="180" cy="110" r="2"/><circle cx="300" cy="40" r="2.5"/><circle cx="520" cy="70" r="2"/><circle cx="760" cy="180" r="2.5"/><circle cx="420" cy="140" r="2"/></g>
+  <g fill="#FFE27A"><path d="M240 170 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5Z"/><path d="M560 200 l4 9 9 4 -9 4 -4 9 -4 -9 -9 -4 9 -4Z"/></g>
+  <g fill="#fff" opacity=".8"><ellipse cx="140" cy="230" rx="90" ry="24"/><ellipse cx="180" cy="215" rx="50" ry="24"/><ellipse cx="640" cy="260" rx="100" ry="26"/></g>
+  <g transform="translate(400 120)">
+    <path d="M-60 300 L-48 70 H48 L60 300Z" fill="#E9DDF7" stroke="#7E2FB0" stroke-width="5"/>
+    <path d="M-70 76 L0 -40 L70 76Z" fill="#B55CE6" stroke="#7E2FB0" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M0 -40 V-70" stroke="#7E2FB0" stroke-width="5"/><path d="M0 -70 l18 7 -18 7Z" fill="#FFC93C"/>
+    <rect x="-16" y="110" width="32" height="44" rx="16" fill="#4C7BF3" stroke="#7E2FB0" stroke-width="4"/>
+    <rect x="-16" y="190" width="32" height="40" rx="16" fill="#FFC93C" stroke="#7E2FB0" stroke-width="4"/>
+  </g>
+  <path d="M0 400 Q200 360 400 400 T800 390 V500 H0Z" fill="#9C7BE0"/>
+  <path d="M0 450 Q300 420 600 450 T800 440 V500 H0Z" fill="#7E5CCF"/>
+  <g font-family="ui-rounded, system-ui, sans-serif" font-weight="900" fill="#fff" opacity=".85"><text x="120" y="360" font-size="54">×</text><text x="640" y="380" font-size="54">÷</text><text x="250" y="300" font-size="34">7</text><text x="560" y="320" font-size="34">56</text></g>
+</svg>

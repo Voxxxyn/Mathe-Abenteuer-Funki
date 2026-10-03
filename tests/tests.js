@@ -188,5 +188,204 @@
     assert(Game.stageFor(s, 0) === 1, 'nicht unter 1');
   });
 
+
+  /* =====================================================================
+     Version 2
+     ===================================================================== */
+  function memStore(init) {
+    var m = {}; for (var k in (init || {})) m[k] = init[k];
+    return { data: m, getItem: function (k) { return Object.prototype.hasOwnProperty.call(m, k) ? m[k] : null; },
+      setItem: function (k, v) { m[k] = String(v); }, removeItem: function (k) { delete m[k]; } };
+  }
+  var V1 = root.MA_FIXTURE_V1;
+
+  test('Version: App 2.0.0, Speicherschema 2', function () {
+    assert(MA.VERSION && MA.VERSION.app === '2.0.0' && MA.VERSION.schema === 2 && Store.SCHEMA === 2, 'Versionsangaben');
+  });
+  test('Migration: echter V1-Spielstand → V2, alle Daten erhalten', function () {
+    assert(V1 && V1.version === 1, 'V1-Testdatei fehlt');
+    var raw = JSON.stringify(V1), st = memStore({ 'matheAbenteuer.v1': raw });
+    var s = Store.load(st), info = Store.lastLoad();
+    assert(info.source === 'v1' && info.migrated && info.backupCreated, 'Migration nicht erkannt');
+    assert(s.version === 2 && s.meta.migratedFrom === 1, 'Schema 2 / Herkunft');
+    assert(s.progress.points === V1.progress.points, 'Punkte');
+    assert(s.progress.streak === V1.progress.streak && s.progress.bestStreak === V1.progress.bestStreak, 'Serie');
+    assert(JSON.stringify(s.progress.levels) === JSON.stringify(V1.progress.levels), 'Level');
+    assert(s.progress.chestsOpened.join() === V1.progress.chestsOpened.join(), 'Truhen');
+    assert(s.progress.items.join() === V1.progress.items.join(), 'Gegenstände');
+    assert(s.progress.badges.join() === V1.progress.badges.join(), 'Badges');
+    assert(s.progress.worldsUnlocked === V1.progress.worldsUnlocked, 'Welten');
+    assert(s.stats.tasks === V1.stats.tasks && s.stats.correctFirst === V1.stats.correctFirst && s.stats.wrongAttempts === V1.stats.wrongAttempts, 'Statistik');
+    assert(JSON.stringify(s.stats.cats) === JSON.stringify(V1.stats.cats) && JSON.stringify(s.stats.days) === JSON.stringify(V1.stats.days), 'Fehlerschwerpunkte/Tage');
+    ['range', 'answerMode', 'sound', 'roundLength', 'hints', 'animations', 'difficulty', 'carry'].forEach(function (k) {
+      assert(s.settings[k] === V1.settings[k], 'Einstellung ' + k);
+    });
+    assert(s.settings.theme === 'light' && s.settings.tempo === 'off' && s.settings.area === 'addsub', 'neue Standardwerte');
+    assert(s.stats.ops.add.n + s.stats.ops.sub.n === V1.stats.tasks, 'Rechenarten aus V1 abgeleitet');
+    assert(st.data['matheAbenteuer.v1.backup-before-v2'] === raw, 'Backup unverändert');
+    assert(st.data['matheAbenteuer.v1'] === raw, 'V1-Feld unverändert');
+    assert(JSON.parse(st.data['matheAbenteuer.v2']).version === 2, 'als V2 gespeichert');
+  });
+  test('Migration: Backup wird nicht bei jedem Start überschrieben', function () {
+    var st = memStore({ 'matheAbenteuer.v1': JSON.stringify(V1), 'matheAbenteuer.v1.backup-before-v2': 'ALT' });
+    Store.load(st);
+    assert(st.data['matheAbenteuer.v1.backup-before-v2'] === 'ALT', 'Backup überschrieben');
+    var again = Store.load(st);
+    assert(Store.lastLoad().source === 'v2' && !Store.lastLoad().backupCreated && again.progress.points === V1.progress.points, 'zweiter Start lädt V2');
+  });
+  test('Migration: beschädigter V2-Stand fällt auf V1 zurück, leerer Speicher startet neu', function () {
+    var st = memStore({ 'matheAbenteuer.v1': JSON.stringify(V1), 'matheAbenteuer.v2': '{kaputt' });
+    var s = Store.load(st);
+    assert(s.progress.points === V1.progress.points && st.data['matheAbenteuer.v2.unlesbar'] === '{kaputt', 'Rückfall');
+    var n = Store.load(memStore());
+    assert(Store.lastLoad().source === 'new' && n.progress.points === 0 && n.version === 2, 'Neustart');
+  });
+  test('V2-Einstellungen werden geprüft (Reihen, Darstellung, Tempo)', function () {
+    var s = Store.sanitize({ settings: { rows: [0, 11, 'x', 3, 3, 7], rowMode: 'select', theme: 'pink', tempo: 'turbo', countdownSec: 5, mul: false, div: false } });
+    assert(s.settings.rows.join() === '3,7' && s.settings.rowMode === 'select', 'Reihen');
+    assert(s.settings.theme === 'light' && s.settings.tempo === 'off' && s.settings.countdownSec === 30, 'Darstellung/Tempo');
+    assert(s.settings.mul === true, 'Mal oder Geteilt bleibt an');
+    var e = Store.sanitize({ settings: { rows: [] } });
+    assert(e.settings.rows.length === 10, 'leere Auswahl → alle');
+  });
+  test('Export enthält Schema, Zeitstempel und alle Bereiche; Import erkennt V1 und V2', function () {
+    var s = Store.defaults();
+    Game.registerCorrect(s, Gen.makeTask('mul', 7, 8, false, 8), 1, 2000, '2026-10-01');
+    Game.recordTempo(s, { kind: 'countdown', area: 'muldiv', sec: 60, sig: 'x', tasks: 5, correct: 4, ms: 60000 });
+    var ex = Store.exportData(s);
+    assert(ex.schema === 2 && ex.app === 'mathe-abenteuer-funki' && /^\d{4}-/.test(ex.exportedAt) && ex.appVersion === '2.0.0', 'Kopf');
+    assert(ex.data.settings && ex.data.progress && ex.data.stats && ex.data.tempo && ex.data.stats.mulCats['mul|8'], 'Inhalt');
+    var back = Store.parseImport(JSON.stringify(ex));
+    assert(back.ok && back.schema === 2 && back.state.stats.mulCats['mul|8'].n === 1 && back.state.tempo.rounds === 1, 'V2-Import');
+    var v1 = Store.parseImport(JSON.stringify(V1));
+    assert(v1.ok && v1.schema === 1 && v1.state.progress.points === V1.progress.points && v1.state.meta.migratedFrom === 1, 'V1-Import');
+  });
+  test('Import lehnt ungültige Dateien ab', function () {
+    ['', 'kein json', '42', '[]', '{}', JSON.stringify({ app: 'mathe-abenteuer-fino', schema: 2, data: { settings: {}, progress: {} } }),
+      JSON.stringify({ app: 'mathe-abenteuer-funki', schema: 3, data: { settings: {}, progress: {} } }),
+      JSON.stringify({ settings: {} }), JSON.stringify({ version: 9, settings: {}, progress: {} })].forEach(function (t) {
+      assert(!Store.parseImport(t).ok, 'angenommen: ' + t.slice(0, 40));
+    });
+  });
+  test('Reset löscht auch Einmaleins- und Tempo-Daten, Einstellungen bleiben', function () {
+    var s = Store.defaults(); s.settings.theme = 'dark'; s.settings.rows = [3]; s.settings.rowMode = 'select';
+    s.progress.mul.medals.push('3'); s.tempo.rounds = 4; s.stats.mulCats['mul|3'] = { n: 1, wrong: 0, time: 1 };
+    var r = Store.resetProgress(s);
+    assert(r.progress.mul.medals.length === 0 && r.tempo.rounds === 0 && !r.stats.mulCats['mul|3'], 'nicht gelöscht');
+    assert(r.settings.theme === 'dark' && r.settings.rows.join() === '3', 'Einstellungen verloren');
+  });
+
+  test('Multiplikation: Reihen 1–10 vollständig, richtige Reihenfolge und Ergebnisse', function () {
+    for (var r = 1; r <= 10; r++) {
+      var seq = Gen.rowSequence(r, 'mul');
+      assert(seq.length === 10, 'zehn Aufgaben');
+      seq.forEach(function (t, i) { assert(t.a === i + 1 && t.b === r && t.answer === (i + 1) * r && t.text === (i + 1) + ' × ' + r, t.text); });
+    }
+  });
+  test('Multiplikation: Auswahl einzelner/mehrerer/aller Reihen und gemischt', function () {
+    function opts(o) { var s = Store.defaults().settings; s.div = false; for (var k in o) s[k] = o[k]; return s; }
+    many({ settings: opts({ rowMode: 'select', rows: [7] }) }, 0);
+    for (var i = 0; i < 300; i++) { var t = Gen.generateMulDiv({ settings: opts({ rowMode: 'select', rows: [7] }) }); assert(t.op === 'mul' && t.row === 7 && (t.a === 7 || t.b === 7) && t.answer === t.a * t.b, 'einzeln ' + t.text); }
+    var seen = {};
+    for (i = 0; i < 600; i++) { t = Gen.generateMulDiv({ settings: opts({ rowMode: 'select', rows: [3, 4, 9] }) }); assert([3, 4, 9].indexOf(t.row) >= 0, 'mehrere ' + t.text); seen[t.row] = 1; }
+    assert(Object.keys(seen).length === 3, 'alle gewählten Reihen kommen vor');
+    ['all', 'mixed'].forEach(function (m) {
+      var rows = {};
+      for (var j = 0; j < 2000; j++) { var u = Gen.generateMulDiv({ settings: opts({ rowMode: m }) }); rows[u.row] = 1; assert(u.answer === u.a * u.b && u.answer >= 1 && u.answer <= 100, u.text); }
+      assert(Object.keys(rows).length === 10, m + ': nicht alle Reihen');
+    });
+  });
+  test('Division: nur exakt, kein Rest, nie durch 0, Ergebnis 1–10', function () {
+    var s = Store.defaults().settings; s.mul = false;
+    for (var i = 0; i < 3000; i++) {
+      var t = Gen.generateMulDiv({ settings: s });
+      assert(t.op === 'div' && t.b >= 1 && t.b <= 10, 'Teiler ' + t.text);
+      assert(t.a % t.b === 0 && t.answer === t.a / t.b && t.answer >= 1 && t.answer <= 10 && t.a <= 100, 'Rest/Ergebnis ' + t.text);
+    }
+    for (var r = 1; r <= 10; r++) Gen.rowSequence(r, 'div').forEach(function (u, k) {
+      assert(u.a === (k + 1) * r && u.b === r && u.answer === k + 1 && u.text === u.a + ' ÷ ' + r, u.text);
+    });
+  });
+  test('Mal & Geteilt gemischt: beide Rechenarten, keine Dreierfolge gleicher Art erzwungen', function () {
+    var s = Store.defaults().settings, ops = { mul: 0, div: 0 }, last = [];
+    for (var i = 0; i < 400; i++) { var t = Gen.generateMulDiv({ settings: s, lastOps: last }); ops[t.op]++; last.push(t.op); if (last.length > 5) last.shift(); }
+    assert(ops.mul > 120 && ops.div > 120, 'Mischung ' + ops.mul + '/' + ops.div);
+  });
+  test('Einmaleins Multiple Choice: 4 verschiedene, richtige dabei, positiv', function () {
+    var s = Store.defaults().settings;
+    for (var i = 0; i < 2000; i++) {
+      var t = Gen.generateMulDiv({ settings: s }), ch = Gen.choices(t, 4);
+      assert(ch.length === 4 && ch.indexOf(t.answer) >= 0, 'Anzahl/richtig ' + t.text);
+      ch.forEach(function (v, j) { assert(ch.indexOf(v) === j && v >= 1 && v <= 100, 'Wert ' + v + ' bei ' + t.text); });
+    }
+  });
+  test('Einmaleins Hinweise für alle 200 Aufgaben schlüssig', function () {
+    for (var r = 1; r <= 10; r++) ['mul', 'div'].forEach(function (op) {
+      Gen.rowSequence(r, op).concat(op === 'mul' ? Gen.rowSequence(r, 'mul').map(function (t) { return Gen.makeTask('mul', t.b, t.a, false, r); }) : []).forEach(function (t) {
+        var h = Gen.hints(t), all = h.hint1 + h.hint2 + h.steps.join();
+        assert(h.hint1 && h.hint2 && h.steps.length >= 2 && !/NaN|undefined|Infinity/.test(all), 'Hinweis ' + t.text);
+        assert(h.steps[h.steps.length - 1].indexOf('= ' + t.answer) >= 0, 'Erklärung endet nicht mit Ergebnis: ' + t.text);
+        assert(!/falsch/i.test(Gen.wrongMessage(t, t.answer + 1)), 'freundlich');
+      });
+    });
+  });
+  test('Adaptive Reihen: schwache Reihe moderat häufiger', function () {
+    var s = Store.defaults().settings; s.div = false;
+    var weak = Gen.weakCategories({ 'mul|7': { n: 10, wrong: 6, time: 90000 }, 'mul|2': { n: 20, wrong: 0, time: 40000 } });
+    assert(weak[0] === 'mul|7', weak.join());
+    var n = 0; for (var i = 0; i < 1000; i++) if (Gen.generateMulDiv({ settings: s, weakCats: weak }).row === 7) n++;
+    assert(n > 200 && n < 450, 'Anteil 7er-Reihe ' + n);
+  });
+  test('Statistik: Mal/Geteilt getrennt erfasst, Plus/Minus-Kategorien unverändert', function () {
+    var s = Store.defaults(), d = '2026-10-02';
+    Game.registerCorrect(s, Gen.makeTask('mul', 6, 7, false, 7), 1, 3000, d);
+    Game.registerWrong(s, Gen.makeTask('div', 42, 7, false, 7), 1, d);
+    Game.registerCorrect(s, Gen.makeTask('div', 42, 7, false, 7), 2, 5000, d);
+    Game.registerCorrect(s, Gen.makeTask('add', 3, 4), 1, 1000, d);
+    assert(s.stats.mulCats['mul|7'].n === 1 && s.stats.mulCats['div|7'].wrong === 1, 'Reihen');
+    assert(Object.keys(s.stats.cats).join() === 'add|o|20', 'Plus/Minus-Kategorien');
+    assert(s.stats.ops.mul.first === 1 && s.stats.ops.div.wrong === 1 && s.stats.ops.add.n === 1 && s.stats.tasks === 3, 'Rechenarten');
+    assert(Gen.categoryLabel('div|7') === 'Geteilt: 7er-Reihe', 'Bezeichnung');
+  });
+  test('Reihentraining: Sterne verbessern, Medaille nur einmal', function () {
+    var s = Store.defaults();
+    var a = Game.completeRow(s, 8, 'mul', 10, 10);
+    assert(a.stars === 3 && !a.medal, 'Mal 3 Sterne');
+    var b = Game.completeRow(s, 8, 'div', 6, 10);
+    assert(b.stars === 1 && Game.rowStars(s.progress, 8).div === 1, 'Geteilt 1 Stern');
+    var c = Game.completeRow(s, 8, 'div', 10, 10);
+    assert(c.medal && s.progress.mul.medals.join() === '8', 'Medaille');
+    var d2 = Game.completeRow(s, 8, 'div', 5, 10);
+    assert(!d2.medal && Game.rowStars(s.progress, 8).div === 3 && s.progress.mul.medals.length === 1, 'keine Verschlechterung/Doppelmedaille');
+    assert(Game.completeRow(s, 11, 'mul', 10, 10) === null && Game.completeRow(s, 0, 'mul', 10, 10) === null, 'ungültige Reihe');
+  });
+  test('Tempo: Countdown-Rekord = mehr richtig, Stoppuhr-Rekord = schneller, getrennt nach Modus', function () {
+    var s = Store.defaults();
+    var o = { kind: 'countdown', area: 'addsub', sec: 120, sig: 'as' };
+    function cd(c) { return Game.recordTempo(s, { kind: o.kind, area: o.area, sec: o.sec, sig: o.sig, tasks: c + 2, correct: c, ms: 120000 }); }
+    var r1 = cd(10), r2 = cd(8), r3 = cd(12);
+    assert(r1.best && r1.firstRecord && !r2.best && r3.best && r3.prev === 10, 'Countdown');
+    var other = Game.recordTempo(s, { kind: 'countdown', area: 'addsub', sec: 60, sig: 'as', tasks: 3, correct: 3, ms: 60000 });
+    assert(other.firstRecord, 'andere Dauer = eigener Rekord');
+    function sw(ms) { return Game.recordTempo(s, { kind: 'stopwatch', area: 'row', count: 10, sig: '8:mul', tasks: 10, correct: 10, ms: ms }); }
+    var w1 = sw(40000), w2 = sw(45000), w3 = sw(30000);
+    assert(w1.best && !w2.best && w3.best && w3.prev === 40000, 'Stoppuhr');
+    assert(s.tempo.rounds === 7 && s.tempo.history.length === 7, 'Verlauf');
+    for (var i = 0; i < 40; i++) sw(50000 + i);
+    assert(s.tempo.history.length === 30, 'Verlauf begrenzt');
+    var empty = Game.recordTempo(s, { kind: 'countdown', area: 'muldiv', sec: 60, sig: 'z', tasks: 0, correct: 0, ms: 60000 });
+    assert(!empty.best, 'leere Runde ist kein Rekord');
+    assert(Store.sanitize(JSON.parse(JSON.stringify(s))).tempo.best[r3.key].v === 12, 'Bestwerte speicherbar');
+  });
+  test('Regression: alle 25 Level, 10 Truhen und 5 Welten durchspielbar wie in Version 1', function () {
+    var s = Store.defaults();
+    for (var w = 0; w < 5; w++) {
+      for (var l = 1; l <= 5; l++) { var r = Game.completeLevel(s, w, l, 10, 10); assert(r && r.firstTime, 'Level ' + (w + 1) + '-' + l); }
+      assert(Game.openChest(s, w, 1) && Game.openChest(s, w, 2), 'Truhen Welt ' + (w + 1));
+    }
+    assert(Game.levelsCompleted(s.progress) === 25 && s.progress.items.length === 10 && s.progress.badges.length === 5 && s.progress.worldsUnlocked === 5, 'Endstand');
+    assert(Game.totalStars(s.progress) === 75, 'Sterne');
+  });
+
   root.MA_TEST_RESULTS = results;
 })(typeof window !== 'undefined' ? window : globalThis);
