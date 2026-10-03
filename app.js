@@ -14,7 +14,7 @@
   var updatePending = false;
   var R = null;            // laufendes Reihentraining (V2)
   var tempoTimer = null;   // Uhr für Countdown/Stoppuhr (V2)
-  var swReg = null, updateReady = false, refreshing = false;
+  var swReg = null, updateReady = false, refreshing = false, updateRequested = false;
   var colorSrc = W[Math.max(0, worldIdx)];
   var darkMQ = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
@@ -938,6 +938,7 @@
   function applyUpdate() {
     if (!swReg || !swReg.waiting) { window.location.reload(); return; }
     save(true);
+    updateRequested = true;
     try { sessionStorage.setItem('ma-update-at', String(Date.now())); } catch (e) { /* egal */ }
     swReg.waiting.postMessage({ type: 'SKIP_WAITING' });
   }
@@ -1420,7 +1421,7 @@
         refreshing = true;
         updatePending = true;
         save(true);
-        if (current === 'start' && !modalOpen()) window.location.reload();
+        if (updateRequested || (current === 'start' && !modalOpen())) window.location.reload();
         else { var n = $('update-note'); if (n) n.hidden = false; }
       });
       navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).then(function (reg) {
